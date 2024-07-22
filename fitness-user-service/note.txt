@@ -1,0 +1,9 @@
+﻿Add-Migration AddRelationalToDbFromUserService -Project fitness-db -StartupProject fitness-user-service
+Update-Database -Project fitness-db -StartupProject fitness-user-service
+
+Get-Migration -Project fitness-db -StartupProject fitness-user-service
+Update-Database -Migration <nama_migration> -Project fitness-db -StartupProject fitness-user-service
+Remove-Migration -Project fitness-db -StartupProject fitness-user-service
+
+
+Drop-Database -Project fitness-db -StartupProject fitness-user-service

@@ -16,12 +16,16 @@ namespace fitness_user_service.Controllers
         }
 
         [HttpPost]
-        public IActionResult CreateUser([FromBody]  ReqUserDto userReq)
+        public IActionResult CreateUser([FromBody] ReqUserDto userReq)
         {
             try
             {
                 if (userReq == null)
-                    return BadRequest(ModelState);
+                    return BadRequest(new
+                    {
+                        status = "Failed",
+                        message = "Requset not valid"
+                    });
 
                 var isUserExist = _userRep.GetUsers()
                     .Where(u => u.UserName.Trim().ToLower() == userReq.UserName.Trim().ToLower())
@@ -29,18 +33,12 @@ namespace fitness_user_service.Controllers
 
                 if (isUserExist != null)
                 {
-                    ModelState.AddModelError("", "User already exists");
-                    if (!ModelState.IsValid)
+                    return Ok(new
                     {
-                        var errors = ModelState.Values.SelectMany(v => v.Errors)
-                                              .Select(e => e.ErrorMessage)
-                                              .ToList();
-                        return BadRequest(new
-                        {
-                            status = "failed",
-                            errors = errors
-                        });
-                    }
+                        status = "Success",
+                        message = "User already exists",
+                        data = isUserExist
+                    });
                 }
 
                 var user = new User
@@ -54,140 +52,196 @@ namespace fitness_user_service.Controllers
 
                 if (!_userRep.CreateUser(user))
                 {
-                    ModelState.AddModelError("", "Something went wrong while savin");
-                    return StatusCode(500, ModelState);
+                    return StatusCode(500, new
+                    {
+                        status = "Failed",
+                        message = "Something went wrong while saving",
+                    });
                 }
 
-                return Ok( new { 
-                    status = "success",
-                    message = "User Successfully created"
+                return Ok(new
+                {
+                    status = "Success",
+                    message = "User Successfully created",
+                    data = user
                 });
             }
             catch (Exception e)
             {
                 return BadRequest(new
                 {
-                    status = "failed",
-                    message = e.Message
+                    status = "Failed",
+                    message = e.Message,
+                    InnerException = e.InnerException.Message
                 });
-                throw;
             }
         }
 
         [HttpPut("{userId}")]
         public IActionResult UpdateUser(int userId, [FromBody] ReqUserDto userReq)
         {
-            if (userReq == null)
-                return BadRequest(ModelState);
-
-            var isUserExist = _userRep.GetUsers()
-                    .Where(u => u.UserID == userId)
-                    .FirstOrDefault();
-
-            if (isUserExist == null)
-                return NotFound(new
-                {
-                    status = "failed",
-                    message = "User not found!"
-                });
-
-            
-            isUserExist.UserID = userId;
-            isUserExist.UserName = userReq.UserName;
-            isUserExist.Age = userReq.Age;
-            isUserExist.Gender = userReq.Gender;
-            isUserExist.Weight = userReq.Height;
-            isUserExist.Height = userReq.Weight;
-
-            var updatedUser = _userRep.UpdateUser(isUserExist);
-            if (updatedUser == null)
+            try
             {
-                ModelState.AddModelError("", "Something went wrong updating user");
-                return StatusCode(500, new {
-                    status = "failed",
-                    message = "Something went wrong updating user"
+                if (userReq == null)
+                    return BadRequest(ModelState);
+
+                var isUserExist = _userRep.GetUsers()
+                        .Where(u => u.UserID == userId)
+                        .FirstOrDefault();
+
+                if (isUserExist == null)
+                    return Ok(new
+                    {
+                        status = "Failed",
+                        message = "User not found!"
+                    });
+
+
+                isUserExist.UserID = userId;
+                isUserExist.UserName = userReq.UserName;
+                isUserExist.Age = userReq.Age;
+                isUserExist.Gender = userReq.Gender;
+                isUserExist.Weight = userReq.Height;
+                isUserExist.Height = userReq.Weight;
+
+                var updatedUser = _userRep.UpdateUser(isUserExist);
+                if (updatedUser == null)
+                {
+                    return StatusCode(500, new
+                    {
+                        status = "Failed",
+                        message = "Something went wrong updating user"
+                    });
+                }
+
+                return Ok(new
+                {
+                    status = "Success",
+                    message = "User Successfully updated",
+                    data = updatedUser
                 });
             }
-
-            return Ok(new
+            catch (Exception e)
             {
-                status = "success",
-                message = "User Successfully updated",
-                data = updatedUser
-            });
+                return BadRequest(new
+                {
+                    status = "Failed",
+                    message = e.Message,
+                    InnerException = e.InnerException.Message
+                });
+            }
         }
 
         [HttpDelete("{userId}")]
         public IActionResult DeleteUser(int userId)
         {
-            var isUserExist = _userRep.GetUsers()
-                    .Where(u => u.UserID == userId)
-                    .FirstOrDefault();
+            try
+            {
+                var isUserExist = _userRep.GetUsers()
+                .Where(u => u.UserID == userId)
+                .FirstOrDefault();
 
-            if (isUserExist == null)
-                return NotFound(new
+                if (isUserExist == null)
+                    return Ok(new
+                    {
+                        status = "Success",
+                        message = "User not found!"
+                    });
+
+                if (!_userRep.DeleteUser(isUserExist))
                 {
-                    status = "failed",
-                    message = "User not found!"
-                });
+                    return StatusCode(500, new
+                    {
+                        status = "Failed",
+                        message = "Something went wrong deleting user!"
+                    });
+                }
 
-            if (!_userRep.DeleteUser(isUserExist))
+                return Ok(new
+                {
+                    status = "Success",
+                    message = "User Successfully Deleted"
+                });
+            }
+            catch (Exception e)
             {
                 return BadRequest(new
                 {
-                    status = "failed",
-                    message = "Something went wrong deleting user!"
+                    status = "Failed",
+                    message = e.Message,
+                    InnerException = e.InnerException.Message
                 });
             }
-
-            return Ok(new
-            {
-                status = "success",
-                message = "User Successfully Deleted"
-            });
         }
 
         [HttpGet]
-        public IActionResult GetUsers() {
-            var allUsers = _userRep.GetUsers();
-
-            if (allUsers.Count <= 0)
+        public IActionResult GetUsers()
+        {
+            try
             {
-                return NotFound(new
+                var allUsers = _userRep.GetUsers();
+
+                if (allUsers.Count <= 0)
                 {
-                    status = "failed",
-                    message = "User is empty!"
+                    return Ok(new
+                    {
+                        status = "Success",
+                        message = "User is empty!",
+                        data = allUsers
+                    });
+                }
+
+                return Ok(new
+                {
+                    status = "Success",
+                    message = "All User Successfully fetched",
+                    data = allUsers
                 });
             }
-
-            return Ok(new
+            catch (Exception e)
             {
-                status = "success",
-                message = "All User Successfully fetched",
-                data = allUsers
-            });
+                return BadRequest(new
+                {
+                    status = "Failed",
+                    message = e.Message,
+                    InnerException = e.InnerException.Message
+                });
+            }
         }
 
         [HttpGet("{userId}")]
         public IActionResult GetUser(int userId)
         {
-            var user = _userRep.GetUser(userId);
-
-            if (user == null)
+            try
             {
-                return NotFound(new
+                var user = _userRep.GetUser(userId);
+
+                if (user == null)
                 {
-                    status = "failed",
-                    message = "User not found!"
+                    return Ok(new
+                    {
+                        status = "Success",
+                        message = "User not found!",
+                        data = user
+                    });
+                }
+
+                return Ok(new
+                {
+                    status = "Success",
+                    message = "User Successfully fetched",
+                    data = user
                 });
             }
-
-            return Ok(new
+            catch (Exception e)
             {
-                status = "success",
-                message = "User Successfully fetched",
-                data = user
-            });
+                return BadRequest(new
+                {
+                    status = "Failed",
+                    message = e.Message,
+                    InnerException = e.InnerException.Message
+                });
+            }
         }
     }
 }

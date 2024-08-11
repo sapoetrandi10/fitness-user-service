@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace fitness_user_service.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize]
     public class WeatherForecastController : ControllerBase
     {
         private static readonly string[] Summaries = new[]
@@ -19,7 +21,7 @@ namespace fitness_user_service.Controllers
         }
 
         [HttpGet(Name = "GetWeatherForecast")]
-        [ApiExplorerSettings(IgnoreApi = true)]
+        //[ApiExplorerSettings(IgnoreApi = true)]
         public IEnumerable<WeatherForecast> Get()
         {
             return Enumerable.Range(1, 5).Select(index => new WeatherForecast
